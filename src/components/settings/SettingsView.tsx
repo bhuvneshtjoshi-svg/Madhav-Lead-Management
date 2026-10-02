@@ -143,6 +143,67 @@ export const SettingsView: React.FC = () => {
           </div>
         </div>
 
+        {/* Section 3: Working Days & Target Pace */}
+        <div>
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 border-b border-slate-200 pb-2 mb-4">
+            3. Working Days & Target Pace Configuration
+          </h3>
+          <p className="text-xs text-slate-500 mb-3">
+            Select the days considered official working days. The system uses these to calculate the{' '}
+            <strong className="text-slate-700">Required Daily Pace</strong> for remaining monthly targets.
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
+            {[
+              { key: 'monday', label: 'Monday' },
+              { key: 'tuesday', label: 'Tuesday' },
+              { key: 'wednesday', label: 'Wednesday' },
+              { key: 'thursday', label: 'Thursday' },
+              { key: 'friday', label: 'Friday' },
+              { key: 'saturday', label: 'Saturday' },
+              { key: 'sunday', label: 'Sunday' },
+            ].map((day) => {
+              const workingDays = formData.workingDays || {
+                monday: true,
+                tuesday: true,
+                wednesday: true,
+                thursday: true,
+                friday: true,
+                saturday: true,
+                sunday: false,
+              };
+              const isChecked = Boolean((workingDays as any)[day.key]);
+
+              return (
+                <label
+                  key={day.key}
+                  className={`flex items-center space-x-2 p-2.5 rounded-lg border cursor-pointer transition-all ${
+                    isChecked
+                      ? 'bg-blue-50/50 border-blue-300 text-blue-900 font-bold'
+                      : 'bg-slate-50 border-slate-200 text-slate-500'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isChecked}
+                    onChange={(e) => {
+                      const updated = {
+                        ...workingDays,
+                        [day.key]: e.target.checked,
+                      };
+                      setFormData({ ...formData, workingDays: updated });
+                    }}
+                    className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4"
+                  />
+                  <span className="text-xs">{day.label}</span>
+                </label>
+              );
+            })}
+          </div>
+          <p className="text-[11px] text-slate-500 mt-2">
+            Default: Monday–Saturday are working days. Sundays are non-working days unless checked above.
+          </p>
+        </div>
+
         <div className="flex justify-end pt-3 border-t border-slate-200">
           <button
             type="submit"

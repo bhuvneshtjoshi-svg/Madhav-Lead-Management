@@ -84,6 +84,16 @@ export const AddFollowupModal: React.FC<AddFollowupModalProps> = ({
         updateLeadPriority: priority,
       });
 
+      // If status is Site Visit Done or mode is Site Visit, automatically record site visit event
+      if (status === 'Site Visit Done' || modeOfContact === 'Site Visit') {
+        storage.recordSiteVisit({
+          leadId: lead.id,
+          siteVisitDate: date,
+          status: 'Site Visit Done',
+          remarks: remark.trim(),
+        });
+      }
+
       onSuccess();
       onClose();
     } catch (err) {

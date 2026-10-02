@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FollowUp, Lead, LeadPriority, LeadStatus } from '../../types';
+import { FollowUp, Lead, LeadPriority, LeadStatus, TokenStatus } from '../../types';
 import { formatDate, storage } from '../../services/storage';
 import {
   Calendar,
@@ -19,10 +19,16 @@ import {
   Briefcase,
   AlertCircle,
   Sparkles,
+  Archive,
+  ArchiveRestore,
+  Tag,
+  CheckCircle2,
 } from 'lucide-react';
 import { AddFollowupModal } from '../followups/AddFollowupModal';
 import { PrintPreviewModal } from '../print/PrintPreviewModal';
 import { DeleteConfirmModal } from '../common/DeleteConfirmModal';
+import { RecordSiteVisitModal } from './RecordSiteVisitModal';
+import { RecordTokenModal } from './RecordTokenModal';
 
 interface LeadProfileModalProps {
   leadId: string;
@@ -39,8 +45,10 @@ export const LeadProfileModal: React.FC<LeadProfileModalProps> = ({
   onEditLead,
   onDataChanged,
 }) => {
-  const [activeTab, setActiveTab] = useState<'profile' | 'followups' | 'notes'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'followups' | 'site-visits' | 'tokens' | 'notes'>('profile');
   const [showAddFollowup, setShowAddFollowup] = useState(false);
+  const [showRecordSiteVisit, setShowRecordSiteVisit] = useState(false);
+  const [showRecordToken, setShowRecordToken] = useState(false);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [notesDraft, setNotesDraft] = useState<string | null>(null);
@@ -51,6 +59,8 @@ export const LeadProfileModal: React.FC<LeadProfileModalProps> = ({
   if (!lead) return null;
 
   const followUps = storage.getFollowUps(lead.id);
+  const siteVisits = storage.getSiteVisits(lead.id);
+  const tokens = storage.getTokens(lead.id);
   const teams = storage.getTeams();
   const executives = storage.getExecutives().filter(e => e.active);
 
@@ -146,10 +156,26 @@ export const LeadProfileModal: React.FC<LeadProfileModalProps> = ({
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => setShowAddFollowup(true)}
-                className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition-colors shadow-xs"
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition-colors shadow-xs"
               >
                 <PlusCircle className="w-3.5 h-3.5" />
-                <span>Add Follow-up</span>
+                <span>Follow-up</span>
+              </button>
+              <button
+                onClick={() => setShowRecordSiteVisit(true)}
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-colors shadow-xs"
+                title="Record Completed or Planned Site Visit"
+              >
+                <MapPin className="w-3.5 h-3.5" />
+                <span>Site Visit</span>
+              </button>
+              <button
+                onClick={() => setShowRecordToken(true)}
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition-colors shadow-xs"
+                title="Record Booking Token Commitment"
+              >
+                <Tag className="w-3.5 h-3.5" />
+                <span>Token</span>
               </button>
               <button
                 onClick={() => setShowPrintPreview(true)}
@@ -169,6 +195,32 @@ export const LeadProfileModal: React.FC<LeadProfileModalProps> = ({
                 <Edit className="w-3.5 h-3.5" />
                 <span>Edit</span>
               </button>
+              {lead.archived ? (
+                <button
+                  onClick={() => {
+                    storage.unarchiveLead(lead.id);
+                    onDataChanged();
+                  }}
+                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-emerald-800/80 hover:bg-emerald-700 text-emerald-100 border border-emerald-600 text-xs font-medium transition-colors"
+                  title="Restore Lead to Active"
+                >
+                  <ArchiveRestore className="w-3.5 h-3.5" />
+                  <span>Unarchive</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    storage.archiveLead(lead.id);
+                    onDataChanged();
+                    onClose();
+                  }}
+                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium transition-colors"
+                  title="Archive Lead"
+                >
+                  <Archive className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Archive</span>
+                </button>
+              )}
               <button
                 onClick={() => setShowDeleteConfirm(true)}
                 className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-800 transition-colors"
@@ -276,6 +328,32 @@ export const LeadProfileModal: React.FC<LeadProfileModalProps> = ({
               <span>Follow-up History</span>
               <span className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded-full text-[10px] font-semibold">
                 {followUps.length}
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveTab('site-visits')}
+              className={`py-3 border-b-2 transition-colors flex items-center space-x-1.5 cursor-pointer ${
+                activeTab === 'site-visits'
+                  ? 'border-indigo-600 text-indigo-600 font-bold'
+                  : 'border-transparent text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <span>Site Visits</span>
+              <span className="bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.5 rounded-full text-[10px] font-semibold">
+                {siteVisits.length}
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveTab('tokens')}
+              className={`py-3 border-b-2 transition-colors flex items-center space-x-1.5 cursor-pointer ${
+                activeTab === 'tokens'
+                  ? 'border-emerald-600 text-emerald-600 font-bold'
+                  : 'border-transparent text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <span>Tokens & Bookings</span>
+              <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded-full text-[10px] font-semibold">
+                {tokens.length}
               </span>
             </button>
             <button
@@ -578,6 +656,211 @@ export const LeadProfileModal: React.FC<LeadProfileModalProps> = ({
               </div>
             )}
 
+            {/* Site Visits History Tab */}
+            {activeTab === 'site-visits' && (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center bg-white p-4 rounded-lg border border-slate-200">
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center space-x-1.5">
+                      <MapPin className="w-4 h-4 text-indigo-600" />
+                      <span>Site Visits History & Status</span>
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Completed site visits count toward monthly site visit achievement for{' '}
+                      <span className="font-semibold text-slate-700">{lead.teamName}</span> &{' '}
+                      <span className="font-semibold text-slate-700">{lead.executiveName}</span>.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowRecordSiteVisit(true)}
+                    className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-lg shadow-xs transition-colors"
+                  >
+                    <PlusCircle className="w-4 h-4" />
+                    <span>Record New Site Visit</span>
+                  </button>
+                </div>
+
+                {siteVisits.length === 0 ? (
+                  <div className="bg-white p-8 rounded-lg border border-dashed border-slate-300 text-center">
+                    <MapPin className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                    <p className="text-xs font-semibold text-slate-700">No site visits recorded yet</p>
+                    <p className="text-[11px] text-slate-400 mt-1 max-w-sm mx-auto">
+                      Record a customer site visit to automatically attribute and track monthly sales targets.
+                    </p>
+                    <button
+                      onClick={() => setShowRecordSiteVisit(true)}
+                      className="mt-3.5 inline-flex items-center space-x-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-xs rounded-lg border border-indigo-200"
+                    >
+                      <PlusCircle className="w-3.5 h-3.5" />
+                      <span>Record First Site Visit</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 text-slate-500 font-semibold text-[10px] uppercase border-b border-slate-200">
+                        <tr>
+                          <th className="py-2.5 px-3.5">Visit Date</th>
+                          <th className="py-2.5 px-3">Status</th>
+                          <th className="py-2.5 px-3">Attributed Team & Exec</th>
+                          <th className="py-2.5 px-3">Remarks / Feedback</th>
+                          <th className="py-2.5 px-3 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {siteVisits.map((sv) => (
+                          <tr key={sv.id} className="hover:bg-slate-50/60">
+                            <td className="py-3 px-3.5 font-semibold text-slate-800 whitespace-nowrap">
+                              {formatDate(sv.activityDate)}
+                            </td>
+                            <td className="py-3 px-3 whitespace-nowrap">
+                              {sv.status === 'Site Visit Done' ? (
+                                <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                  <span>✓ Completed Visit</span>
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                                  <span>📅 Planned Visit</span>
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3 px-3 text-slate-700 whitespace-nowrap">
+                              <div className="font-semibold text-slate-800">{sv.executiveName || '-'}</div>
+                              <div className="text-[10px] text-slate-500">{sv.teamName || '-'}</div>
+                            </td>
+                            <td className="py-3 px-3 text-slate-700 leading-relaxed">
+                              {sv.remarks || '-'}
+                            </td>
+                            <td className="py-3 px-3 text-right whitespace-nowrap">
+                              {sv.status !== 'Site Visit Done' && (
+                                <button
+                                  onClick={() => {
+                                    storage.updateSalesActivity(sv.id, { status: 'Site Visit Done' });
+                                    storage.updateLead(lead.id, { status: 'Site Visit Done' });
+                                    onDataChanged();
+                                  }}
+                                  className="px-2.5 py-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded border border-emerald-200 transition-colors"
+                                >
+                                  Mark Completed
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Tokens History Tab */}
+            {activeTab === 'tokens' && (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center bg-white p-4 rounded-lg border border-slate-200">
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center space-x-1.5">
+                      <Tag className="w-4 h-4 text-emerald-600" />
+                      <span>Customer Tokens & Bookings</span>
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Active tokens (Token Received & Confirmed) contribute toward monthly Token Target achievement.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowRecordToken(true)}
+                    className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-lg shadow-xs transition-colors"
+                  >
+                    <PlusCircle className="w-4 h-4" />
+                    <span>Record New Token</span>
+                  </button>
+                </div>
+
+                {tokens.length === 0 ? (
+                  <div className="bg-white p-8 rounded-lg border border-dashed border-slate-300 text-center">
+                    <Tag className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                    <p className="text-xs font-semibold text-slate-700">No booking tokens recorded yet</p>
+                    <p className="text-[11px] text-slate-400 mt-1 max-w-sm mx-auto">
+                      Record a customer booking token or commitment amount to track token achievements.
+                    </p>
+                    <button
+                      onClick={() => setShowRecordToken(true)}
+                      className="mt-3.5 inline-flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold text-xs rounded-lg border border-emerald-200"
+                    >
+                      <PlusCircle className="w-3.5 h-3.5" />
+                      <span>Record First Token</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 text-slate-500 font-semibold text-[10px] uppercase border-b border-slate-200">
+                        <tr>
+                          <th className="py-2.5 px-3.5">Token Date</th>
+                          <th className="py-2.5 px-3">Token Amount</th>
+                          <th className="py-2.5 px-3">Unit / Property</th>
+                          <th className="py-2.5 px-3">Status</th>
+                          <th className="py-2.5 px-3">Attributed Team & Exec</th>
+                          <th className="py-2.5 px-3">Remarks / Receipt</th>
+                          <th className="py-2.5 px-3 text-right">Update Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {tokens.map((tk) => (
+                          <tr key={tk.id} className="hover:bg-slate-50/60">
+                            <td className="py-3 px-3.5 font-semibold text-slate-800 whitespace-nowrap">
+                              {formatDate(tk.activityDate)}
+                            </td>
+                            <td className="py-3 px-3 font-mono font-bold text-slate-900 whitespace-nowrap">
+                              ₹ {tk.tokenAmount ? tk.tokenAmount.toLocaleString('en-IN') : '-'}
+                            </td>
+                            <td className="py-3 px-3 font-medium text-slate-700">
+                              {tk.unitRef || '-'}
+                            </td>
+                            <td className="py-3 px-3 whitespace-nowrap">
+                              <span
+                                className={`px-2 py-0.5 rounded text-[11px] font-bold border ${
+                                  tk.status === 'Confirmed'
+                                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                    : tk.status === 'Token Received'
+                                    ? 'bg-blue-50 text-blue-800 border-blue-200'
+                                    : 'bg-rose-50 text-rose-700 border-rose-200 line-through'
+                                }`}
+                              >
+                                {tk.status}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3 text-slate-700 whitespace-nowrap">
+                              <div className="font-semibold text-slate-800">{tk.executiveName || '-'}</div>
+                              <div className="text-[10px] text-slate-500">{tk.teamName || '-'}</div>
+                            </td>
+                            <td className="py-3 px-3 text-slate-700 leading-relaxed">
+                              {tk.remarks || '-'}
+                            </td>
+                            <td className="py-3 px-3 text-right whitespace-nowrap">
+                              <select
+                                value={tk.status}
+                                onChange={(e) => {
+                                  storage.updateTokenStatus(tk.id, e.target.value as TokenStatus);
+                                  onDataChanged();
+                                }}
+                                className="text-[11px] font-semibold bg-white border border-slate-300 rounded px-2 py-1 text-slate-800 focus:outline-hidden"
+                              >
+                                <option value="Token Received">Token Received</option>
+                                <option value="Confirmed">Confirmed</option>
+                                <option value="Cancelled">Cancelled</option>
+                                <option value="Refunded">Refunded</option>
+                              </select>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
             {activeTab === 'notes' && (
               <div className="bg-white p-5 rounded-lg border border-slate-200 space-y-4">
                 <div>
@@ -634,6 +917,26 @@ export const LeadProfileModal: React.FC<LeadProfileModalProps> = ({
         isOpen={showDeleteConfirm}
         onClose={() => setShowDeleteConfirm(false)}
         onConfirm={handleDeleteLead}
+      />
+
+      <RecordSiteVisitModal
+        lead={lead}
+        isOpen={showRecordSiteVisit}
+        onClose={() => setShowRecordSiteVisit(false)}
+        onSuccess={() => {
+          onDataChanged();
+          setActiveTab('site-visits');
+        }}
+      />
+
+      <RecordTokenModal
+        lead={lead}
+        isOpen={showRecordToken}
+        onClose={() => setShowRecordToken(false)}
+        onSuccess={() => {
+          onDataChanged();
+          setActiveTab('tokens');
+        }}
       />
     </>
   );

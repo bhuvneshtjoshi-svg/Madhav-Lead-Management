@@ -65,6 +65,18 @@ export const TeamWork: React.FC<TeamWorkProps> = ({ onSelectExecutive }) => {
     return { execStats, totals };
   }, [currentTeam, executives, leads, today]);
 
+  if (teams.length === 0) {
+    return (
+      <div className="bg-white rounded-xl border border-slate-200 p-12 text-center shadow-xs">
+        <Users className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+        <h3 className="text-sm font-bold text-slate-800">No teams created yet</h3>
+        <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+          Create sales teams and executives in the "Teams & Executives" master to monitor workload and team-wise sales progress.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header & Team Selector */}

@@ -15,6 +15,7 @@ export const MastersView: React.FC = () => {
   // New Project Form
   const [newProjName, setNewProjName] = useState('');
   const [newProjLocation, setNewProjLocation] = useState('');
+  const [newProjDesc, setNewProjDesc] = useState('');
 
   // New Source Form
   const [newSourceName, setNewSourceName] = useState('');
@@ -29,9 +30,10 @@ export const MastersView: React.FC = () => {
   const handleAddProject = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newProjName.trim()) return;
-    storage.addProject(newProjName.trim(), newProjLocation.trim() || 'Prime Location');
+    storage.addProject(newProjName.trim(), newProjLocation.trim() || 'Prime Location', newProjDesc.trim());
     setNewProjName('');
     setNewProjLocation('');
+    setNewProjDesc('');
     refresh();
   };
 
@@ -122,24 +124,34 @@ export const MastersView: React.FC = () => {
           <div className="p-6 space-y-6">
             {/* Add Project Form */}
             <form onSubmit={handleAddProject} className="bg-slate-50 p-4 rounded-lg border border-slate-200 flex flex-wrap items-end gap-3 text-xs">
-              <div className="flex-1 min-w-[200px]">
+              <div className="flex-1 min-w-[180px]">
                 <label className="block font-semibold text-slate-700 mb-1">New Project Name *</label>
                 <input
                   type="text"
                   value={newProjName}
                   onChange={(e) => setNewProjName(e.target.value)}
-                  placeholder="e.g. By The Garden Phase 2"
+                  placeholder="e.g. Royal Palms Residency"
                   required
                   className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded focus:ring-1 focus:ring-blue-500"
                 />
               </div>
-              <div className="flex-1 min-w-[200px]">
+              <div className="flex-1 min-w-[180px]">
                 <label className="block font-semibold text-slate-700 mb-1">Location Details</label>
                 <input
                   type="text"
                   value={newProjLocation}
                   onChange={(e) => setNewProjLocation(e.target.value)}
-                  placeholder="e.g. SG Highway, Bodakdev"
+                  placeholder="e.g. Main Ring Road"
+                  className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex-1 min-w-[180px]">
+                <label className="block font-semibold text-slate-700 mb-1">Description (Optional)</label>
+                <input
+                  type="text"
+                  value={newProjDesc}
+                  onChange={(e) => setNewProjDesc(e.target.value)}
+                  placeholder="e.g. 3 & 4 BHK Luxury High-rise"
                   className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded focus:ring-1 focus:ring-blue-500"
                 />
               </div>
@@ -153,43 +165,55 @@ export const MastersView: React.FC = () => {
             </form>
 
             {/* Projects Table */}
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px] border-b border-slate-200">
-                <tr>
-                  <th className="py-2.5 px-3">Project Name</th>
-                  <th className="py-2.5 px-3">Location</th>
-                  <th className="py-2.5 px-3 text-center">Status</th>
-                  <th className="py-2.5 px-3 text-right">Toggle Active</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {projects.map(proj => (
-                  <tr key={proj.id} className="hover:bg-slate-50">
-                    <td className="py-3 px-3 font-bold text-slate-900">{proj.projectName}</td>
-                    <td className="py-3 px-3 text-slate-600">{proj.location}</td>
-                    <td className="py-3 px-3 text-center">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                        proj.active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500'
-                      }`}>
-                        {proj.active ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3 text-right">
-                      <button
-                        onClick={() => handleToggleProject(proj)}
-                        className="text-slate-400 hover:text-slate-800"
-                      >
-                        {proj.active ? (
-                          <ToggleRight className="w-5 h-5 text-emerald-600" />
-                        ) : (
-                          <ToggleLeft className="w-5 h-5 text-slate-400" />
-                        )}
-                      </button>
-                    </td>
+            {projects.length === 0 ? (
+              <div className="p-8 text-center bg-white rounded-lg border border-slate-200">
+                <Building className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                <h4 className="text-sm font-semibold text-slate-700">No projects created yet</h4>
+                <p className="text-xs text-slate-500 mt-1">
+                  Add your real estate projects above to make them available in customer lead requirements.
+                </p>
+              </div>
+            ) : (
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px] border-b border-slate-200">
+                  <tr>
+                    <th className="py-2.5 px-3">Project Name</th>
+                    <th className="py-2.5 px-3">Location</th>
+                    <th className="py-2.5 px-3">Description</th>
+                    <th className="py-2.5 px-3 text-center">Status</th>
+                    <th className="py-2.5 px-3 text-right">Toggle Active</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {projects.map(proj => (
+                    <tr key={proj.id} className="hover:bg-slate-50">
+                      <td className="py-3 px-3 font-bold text-slate-900">{proj.projectName}</td>
+                      <td className="py-3 px-3 text-slate-600">{proj.location}</td>
+                      <td className="py-3 px-3 text-slate-500">{proj.description || '-'}</td>
+                      <td className="py-3 px-3 text-center">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                          proj.active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500'
+                        }`}>
+                          {proj.active ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 text-right">
+                        <button
+                          onClick={() => handleToggleProject(proj)}
+                          className="text-slate-400 hover:text-slate-800"
+                        >
+                          {proj.active ? (
+                            <ToggleRight className="w-5 h-5 text-emerald-600" />
+                          ) : (
+                            <ToggleLeft className="w-5 h-5 text-slate-400" />
+                          )}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         )}
 

@@ -1,6 +1,16 @@
 import React, { useState, useMemo } from 'react';
-import { getTodayDateString, storage } from '../../services/storage';
-import { BarChart3, Calendar, Download, PieChart, Users, TrendingUp, Filter } from 'lucide-react';
+import { MONTH_NAMES, getMonthName, getTodayDateString, storage } from '../../services/storage';
+import {
+  BarChart3,
+  Calendar,
+  Download,
+  Filter,
+  PieChart,
+  Printer,
+  Target,
+  TrendingUp,
+  Users,
+} from 'lucide-react';
 
 export const ReportsView: React.FC = () => {
   const leads = storage.getLeads();
@@ -9,9 +19,15 @@ export const ReportsView: React.FC = () => {
   const leadSources = storage.getLeadSources();
   const today = getTodayDateString();
 
+  const currentDate = new Date();
+  const [targetReportMonth, setTargetReportMonth] = useState<number>(currentDate.getMonth() + 1);
+  const [targetReportYear, setTargetReportYear] = useState<number>(currentDate.getFullYear());
+
   // Date range filter
   const [dateRange, setDateRange] = useState<'ALL' | 'THIS_MONTH' | 'LAST_30' | 'THIS_YEAR'>('ALL');
-  const [activeReportTab, setActiveReportTab] = useState<'summary' | 'teams' | 'executives' | 'sources'>('summary');
+  const [activeReportTab, setActiveReportTab] = useState<
+    'summary' | 'teams' | 'executives' | 'sources' | 'targets'
+  >('summary');
 
   // Filtered leads based on date range
   const filteredLeads = useMemo(() => {
@@ -230,10 +246,32 @@ export const ReportsView: React.FC = () => {
           >
             4. Lead Source Analysis
           </button>
+          <button
+            onClick={() => setActiveReportTab('targets')}
+            className={`py-3 px-4 border-b-2 transition-colors cursor-pointer flex items-center space-x-1.5 ${
+              activeReportTab === 'targets'
+                ? 'border-blue-600 text-blue-600 font-bold bg-white'
+                : 'border-transparent text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Target className="w-3.5 h-3.5 text-blue-600" />
+            <span>5. Target & Achievement Report</span>
+          </button>
         </div>
 
-        {/* Tab 1: Lead Summary */}
-        {activeReportTab === 'summary' && (
+        {/* Empty State Check for Selected Period */}
+        {filteredLeads.length === 0 && activeReportTab !== 'targets' ? (
+          <div className="p-12 text-center bg-white">
+            <BarChart3 className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+            <h4 className="text-sm font-bold text-slate-800">No data available for the selected period.</h4>
+            <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+              Reports and conversion metrics will calculate automatically once customer leads are recorded.
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* Tab 1: Lead Summary */}
+            {activeReportTab === 'summary' && (
           <div className="p-6 space-y-6">
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
               <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
@@ -398,6 +436,365 @@ export const ReportsView: React.FC = () => {
               </tbody>
             </table>
           </div>
+        )}
+
+        {/* Tab 5: Monthly Target & Sales Achievement Report */}
+        {activeReportTab === 'targets' && (
+          <div className="p-6 space-y-5">
+            {/* Header & Controls */}
+            <div className="flex flex-wrap justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-200 gap-3">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-blue-100 text-blue-700 rounded-lg">
+                  <Target className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+                    Monthly Target & Sales Achievement Statement
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Auditable statement showing Targets, Actuals, Gaps, and Achievement Percentages.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  value={targetReportMonth}
+                  onChange={(e) => setTargetReportMonth(parseInt(e.target.value, 10))}
+                  className="text-xs py-1.5 px-3 bg-white border border-slate-300 rounded-lg font-bold text-slate-800 focus:outline-hidden"
+                >
+                  {MONTH_NAMES.map((m, idx) => (
+                    <option key={m} value={idx + 1}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  value={targetReportYear}
+                  onChange={(e) => setTargetReportYear(parseInt(e.target.value, 10))}
+                  className="text-xs py-1.5 px-3 bg-white border border-slate-300 rounded-lg font-bold text-slate-800 focus:outline-hidden"
+                >
+                  {[targetReportYear - 1, targetReportYear, targetReportYear + 1].map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </select>
+
+                <button
+                  onClick={() => {
+                    const monthName = getMonthName(targetReportMonth);
+                    const rows = [
+                      [
+                        'Month',
+                        'Year',
+                        'Team',
+                        'Executive Scope',
+                        'Lead Target',
+                        'Lead Achieved',
+                        'Lead Gap',
+                        'Lead Ach %',
+                        'SV Target',
+                        'SV Done',
+                        'SV Gap',
+                        'SV Ach %',
+                        'Token Target',
+                        'Token Achieved',
+                        'Token Gap',
+                        'Token Ach %',
+                      ],
+                    ];
+
+                    teams.forEach((t) => {
+                      const tm = storage.getMonthlyTargetAndAchievement(
+                        targetReportMonth,
+                        targetReportYear,
+                        t.id,
+                        undefined
+                      );
+                      rows.push([
+                        monthName,
+                        String(targetReportYear),
+                        t.teamName,
+                        'Overall Team Target',
+                        String(tm.leads.target),
+                        String(tm.leads.achieved),
+                        String(tm.leads.gap),
+                        tm.leads.achievementPercent !== null ? `${tm.leads.achievementPercent}%` : 'Not Set',
+                        String(tm.siteVisits.target),
+                        String(tm.siteVisits.achieved),
+                        String(tm.siteVisits.gap),
+                        tm.siteVisits.achievementPercent !== null ? `${tm.siteVisits.achievementPercent}%` : 'Not Set',
+                        String(tm.tokens.target),
+                        String(tm.tokens.achieved),
+                        String(tm.tokens.gap),
+                        tm.tokens.achievementPercent !== null ? `${tm.tokens.achievementPercent}%` : 'Not Set',
+                      ]);
+
+                      executives
+                        .filter((e) => e.teamId === t.id)
+                        .forEach((ex) => {
+                          const em = storage.getMonthlyTargetAndAchievement(
+                            targetReportMonth,
+                            targetReportYear,
+                            t.id,
+                            ex.id
+                          );
+                          rows.push([
+                            monthName,
+                            String(targetReportYear),
+                            t.teamName,
+                            ex.name,
+                            String(em.leads.target),
+                            String(em.leads.achieved),
+                            String(em.leads.gap),
+                            em.leads.achievementPercent !== null ? `${em.leads.achievementPercent}%` : 'Not Set',
+                            String(em.siteVisits.target),
+                            String(em.siteVisits.achieved),
+                            String(em.siteVisits.gap),
+                            em.siteVisits.achievementPercent !== null ? `${em.siteVisits.achievementPercent}%` : 'Not Set',
+                            String(em.tokens.target),
+                            String(em.tokens.achieved),
+                            String(em.tokens.gap),
+                            em.tokens.achievementPercent !== null ? `${em.tokens.achievementPercent}%` : 'Not Set',
+                          ]);
+                        });
+                    });
+
+                    const csvContent =
+                      'data:text/csv;charset=utf-8,' +
+                      rows.map((e) => e.map((val) => `"${val.replace(/"/g, '""')}"`).join(',')).join('\n');
+                    const encodedUri = encodeURI(csvContent);
+                    const link = document.createElement('a');
+                    link.setAttribute('href', encodedUri);
+                    link.setAttribute(
+                      'download',
+                      `BM_Target_Report_${monthName}_${targetReportYear}.csv`
+                    );
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                  }}
+                  className="flex items-center space-x-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs rounded-lg border border-slate-300 shadow-2xs transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Export CSV</span>
+                </button>
+
+                <button
+                  onClick={() => window.print()}
+                  className="flex items-center space-x-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-lg shadow-xs transition-colors"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Print Report</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Target & Achievement Statement Table */}
+            <div className="overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-xs">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-600 font-bold uppercase text-[10px] border-b border-slate-200">
+                  <tr>
+                    <th className="py-3 px-3.5">Month</th>
+                    <th className="py-3 px-3">Team</th>
+                    <th className="py-3 px-3">Scope / Executive</th>
+                    <th className="py-3 px-2 text-right">Lead Tgt</th>
+                    <th className="py-3 px-2 text-right">Lead Ach</th>
+                    <th className="py-3 px-2 text-right">Lead Gap</th>
+                    <th className="py-3 px-2 text-right">SV Tgt</th>
+                    <th className="py-3 px-2 text-right">SV Ach</th>
+                    <th className="py-3 px-2 text-right">SV Gap</th>
+                    <th className="py-3 px-2 text-right">Token Tgt</th>
+                    <th className="py-3 px-2 text-right">Token Ach</th>
+                    <th className="py-3 px-2 text-right">Token Gap</th>
+                    <th className="py-3 px-3 text-center">Achievement %</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {teams.map((t) => {
+                    const tm = storage.getMonthlyTargetAndAchievement(
+                      targetReportMonth,
+                      targetReportYear,
+                      t.id,
+                      undefined
+                    );
+                    const teamExecs = executives.filter((e) => e.teamId === t.id);
+
+                    return (
+                      <React.Fragment key={t.id}>
+                        {/* Team Header Row */}
+                        <tr className="bg-blue-50/30 font-bold">
+                          <td className="py-3 px-3.5 whitespace-nowrap text-slate-900">
+                            {getMonthName(targetReportMonth)} {targetReportYear}
+                          </td>
+                          <td className="py-3 px-3 text-blue-900 whitespace-nowrap">
+                            {t.teamName}
+                          </td>
+                          <td className="py-3 px-3 text-blue-950 font-bold whitespace-nowrap">
+                            🏢 Team Target
+                          </td>
+
+                          {/* Leads */}
+                          <td className="py-3 px-2 text-right font-mono text-slate-600">
+                            {tm.leads.target || '—'}
+                          </td>
+                          <td className="py-3 px-2 text-right font-mono text-blue-900 font-black">
+                            {tm.leads.achieved}
+                          </td>
+                          <td className="py-3 px-2 text-right font-mono text-slate-800">
+                            {tm.leads.isExceeded ? (
+                              <span className="text-emerald-700 font-bold text-[10px]">
+                                Exceeded +{tm.leads.exceededBy}
+                              </span>
+                            ) : (
+                              tm.leads.gap
+                            )}
+                          </td>
+
+                          {/* Site Visits */}
+                          <td className="py-3 px-2 text-right font-mono text-slate-600">
+                            {tm.siteVisits.target || '—'}
+                          </td>
+                          <td className="py-3 px-2 text-right font-mono text-indigo-900 font-black">
+                            {tm.siteVisits.achieved}
+                          </td>
+                          <td className="py-3 px-2 text-right font-mono text-slate-800">
+                            {tm.siteVisits.isExceeded ? (
+                              <span className="text-emerald-700 font-bold text-[10px]">
+                                Exceeded +{tm.siteVisits.exceededBy}
+                              </span>
+                            ) : (
+                              tm.siteVisits.gap
+                            )}
+                          </td>
+
+                          {/* Tokens */}
+                          <td className="py-3 px-2 text-right font-mono text-slate-600">
+                            {tm.tokens.target || '—'}
+                          </td>
+                          <td className="py-3 px-2 text-right font-mono text-emerald-900 font-black">
+                            {tm.tokens.achieved}
+                          </td>
+                          <td className="py-3 px-2 text-right font-mono text-slate-800">
+                            {tm.tokens.isExceeded ? (
+                              <span className="text-emerald-700 font-bold text-[10px]">
+                                Exceeded +{tm.tokens.exceededBy}
+                              </span>
+                            ) : (
+                              tm.tokens.gap
+                            )}
+                          </td>
+
+                          {/* Ach % */}
+                          <td className="py-3 px-3 text-center whitespace-nowrap font-mono text-[10.5px]">
+                            <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-900 font-bold">
+                              L:{' '}
+                              {tm.leads.achievementPercent !== null
+                                ? `${tm.leads.achievementPercent}%`
+                                : '—'}
+                            </span>{' '}
+                            <span className="px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-900 font-bold">
+                              SV:{' '}
+                              {tm.siteVisits.achievementPercent !== null
+                                ? `${tm.siteVisits.achievementPercent}%`
+                                : '—'}
+                            </span>{' '}
+                            <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-900 font-bold">
+                              T:{' '}
+                              {tm.tokens.achievementPercent !== null
+                                ? `${tm.tokens.achievementPercent}%`
+                                : '—'}
+                            </span>
+                          </td>
+                        </tr>
+
+                        {/* Executive Sub-Rows */}
+                        {teamExecs.map((ex) => {
+                          const em = storage.getMonthlyTargetAndAchievement(
+                            targetReportMonth,
+                            targetReportYear,
+                            t.id,
+                            ex.id
+                          );
+                          return (
+                            <tr key={ex.id} className="hover:bg-slate-50/70 text-slate-700">
+                              <td className="py-2.5 px-3.5 text-slate-400 whitespace-nowrap pl-6">
+                                ↳
+                              </td>
+                              <td className="py-2.5 px-3 text-slate-500 whitespace-nowrap">
+                                {t.teamName}
+                              </td>
+                              <td className="py-2.5 px-3 whitespace-nowrap font-medium text-slate-800">
+                                👤 {ex.name}
+                              </td>
+
+                              {/* Leads */}
+                              <td className="py-2.5 px-2 text-right font-mono text-slate-500">
+                                {em.leads.target || '—'}
+                              </td>
+                              <td className="py-2.5 px-2 text-right font-mono font-bold text-blue-800">
+                                {em.leads.achieved}
+                              </td>
+                              <td className="py-2.5 px-2 text-right font-mono text-slate-600">
+                                {em.leads.isExceeded ? 'Exceeded' : em.leads.gap}
+                              </td>
+
+                              {/* Site Visits */}
+                              <td className="py-2.5 px-2 text-right font-mono text-slate-500">
+                                {em.siteVisits.target || '—'}
+                              </td>
+                              <td className="py-2.5 px-2 text-right font-mono font-bold text-indigo-800">
+                                {em.siteVisits.achieved}
+                              </td>
+                              <td className="py-2.5 px-2 text-right font-mono text-slate-600">
+                                {em.siteVisits.isExceeded ? 'Exceeded' : em.siteVisits.gap}
+                              </td>
+
+                              {/* Tokens */}
+                              <td className="py-2.5 px-2 text-right font-mono text-slate-500">
+                                {em.tokens.target || '—'}
+                              </td>
+                              <td className="py-2.5 px-2 text-right font-mono font-bold text-emerald-800">
+                                {em.tokens.achieved}
+                              </td>
+                              <td className="py-2.5 px-2 text-right font-mono text-slate-600">
+                                {em.tokens.isExceeded ? 'Exceeded' : em.tokens.gap}
+                              </td>
+
+                              {/* Ach % */}
+                              <td className="py-2.5 px-3 text-center whitespace-nowrap font-mono text-[10px]">
+                                <span className="text-blue-700">
+                                  {em.leads.achievementPercent !== null
+                                    ? `${em.leads.achievementPercent}%`
+                                    : '—'}
+                                </span>{' '}
+                                &bull;{' '}
+                                <span className="text-indigo-700">
+                                  {em.siteVisits.achievementPercent !== null
+                                    ? `${em.siteVisits.achievementPercent}%`
+                                    : '—'}
+                                </span>{' '}
+                                &bull;{' '}
+                                <span className="text-emerald-700">
+                                  {em.tokens.achievementPercent !== null
+                                    ? `${em.tokens.achievementPercent}%`
+                                    : '—'}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </React.Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+          </>
         )}
       </div>
     </div>

@@ -148,6 +148,7 @@ export interface Lead {
 
   initialContact: InitialContact;
   managementNotes?: string;
+  archived?: boolean;
 
   // Cached summary fields for fast filtering and reporting
   lastFollowUpDate?: string;
@@ -179,6 +180,7 @@ export interface Project {
   id: string;
   projectName: string;
   location: string;
+  description?: string;
   active: boolean;
 }
 
@@ -195,6 +197,16 @@ export interface PreferredUnit {
   active: boolean;
 }
 
+export interface WorkingDaysConfig {
+  monday: boolean;
+  tuesday: boolean;
+  wednesday: boolean;
+  thursday: boolean;
+  friday: boolean;
+  saturday: boolean;
+  sunday: boolean;
+}
+
 export interface AppSettings {
   leadIdPrefix: string;
   nextLeadNumber: number;
@@ -202,10 +214,53 @@ export interface AppSettings {
   currencySymbol: string;
   defaultFollowupDays: number;
   dateFormat: 'DD-MM-YYYY' | 'YYYY-MM-DD';
+  workingDays?: WorkingDaysConfig;
+}
+
+export type ActivityType = 'Lead' | 'Site Visit' | 'Token';
+
+export type SiteVisitStatus = 'Site Visit Planned' | 'Site Visit Done';
+
+export type TokenStatus = 'Token Received' | 'Confirmed' | 'Cancelled' | 'Refunded';
+
+export interface SalesActivity {
+  id: string;
+  activityType: ActivityType;
+  leadId: string;
+  customerName: string;
+  projectId?: string;
+  projectName?: string;
+  teamId: string;
+  teamName: string;
+  executiveId: string;
+  executiveName: string;
+  activityDate: string; // YYYY-MM-DD
+  status: string; // 'Created' for Lead, SiteVisitStatus, TokenStatus
+  tokenAmount?: number;
+  unitRef?: string;
+  remarks?: string;
+  createdAt: string; // ISO
+}
+
+export interface MonthlyTarget {
+  id: string;
+  month: number; // 1 to 12
+  year: number; // e.g. 2026
+  teamId: string;
+  teamName: string;
+  executiveId?: string | null; // null or empty for Team Target
+  executiveName?: string | null;
+  leadTarget: number;
+  siteVisitTarget: number;
+  tokenTarget: number;
+  createdAt: string; // ISO
+  updatedAt: string; // ISO
 }
 
 export interface AppDataBackup {
-  version: string;
+  appIdentifier: 'BM_SALES_LEAD_MANAGER';
+  backupVersion: string;
+  dataStructureVersion: string;
   exportDate: string;
   leads: Lead[];
   followUps: FollowUp[];
@@ -215,4 +270,6 @@ export interface AppDataBackup {
   leadSources: LeadSource[];
   preferredUnits: PreferredUnit[];
   settings: AppSettings;
+  monthlyTargets?: MonthlyTarget[];
+  salesActivities?: SalesActivity[];
 }

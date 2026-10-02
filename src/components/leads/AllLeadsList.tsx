@@ -2,9 +2,13 @@ import React, { useState, useMemo } from 'react';
 import { Lead, LeadPriority, LeadStatus } from '../../types';
 import { formatDate, storage } from '../../services/storage';
 import {
+  Archive,
+  ArchiveRestore,
+  ArrowUpDown,
   Calendar,
   Clock,
   Download,
+  Edit,
   Eye,
   Filter,
   MoreHorizontal,
@@ -14,9 +18,6 @@ import {
   Trash2,
   User,
   Users,
-  Edit,
-  ArrowUpDown,
-  RefreshCw,
 } from 'lucide-react';
 import { AddFollowupModal } from '../followups/AddFollowupModal';
 import { PrintPreviewModal } from '../print/PrintPreviewModal';
@@ -34,7 +35,12 @@ export const AllLeadsList: React.FC<AllLeadsListProps> = ({
   onNewLeadClick,
 }) => {
   const [dataVersion, setDataVersion] = useState(0);
-  const leads = useMemo(() => storage.getLeads(), [dataVersion]);
+  const [viewTab, setViewTab] = useState<'active' | 'archived'>('active');
+
+  const allRawLeads = useMemo(() => storage.getAllLeadsRaw(), [dataVersion]);
+  const activeLeads = useMemo(() => allRawLeads.filter(l => !l.archived), [allRawLeads]);
+  const archivedLeads = useMemo(() => allRawLeads.filter(l => l.archived), [allRawLeads]);
+
   const teams = useMemo(() => storage.getTeams(), [dataVersion]);
   const executives = useMemo(() => storage.getExecutives(), [dataVersion]);
   const projects = useMemo(() => storage.getProjects(), [dataVersion]);
@@ -57,16 +63,19 @@ export const AllLeadsList: React.FC<AllLeadsListProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 12;
 
-  // Selected lead for quick follow-up / print preview / delete
+  // Selected lead for quick follow-up / print preview / delete / archive confirm
   const [followupLead, setFollowupLead] = useState<Lead | null>(null);
   const [printLead, setPrintLead] = useState<Lead | null>(null);
   const [deleteLead, setDeleteLead] = useState<Lead | null>(null);
+  const [archiveConfirmLead, setArchiveConfirmLead] = useState<Lead | null>(null);
 
   const refreshData = () => setDataVersion((v) => v + 1);
 
+  const targetList = viewTab === 'active' ? activeLeads : archivedLeads;
+
   // Filtered and Sorted Leads
   const filteredLeads = useMemo(() => {
-    return leads.filter((lead) => {
+    return targetList.filter((lead) => {
       // Search
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
@@ -104,7 +113,7 @@ export const AllLeadsList: React.FC<AllLeadsListProps> = ({
       }
       return sortOrder === 'asc' ? comparison : -comparison;
     });
-  }, [leads, searchQuery, filterTeam, filterExec, filterProject, filterStatus, filterPriority, filterSource, sortBy, sortOrder]);
+  }, [targetList, searchQuery, filterTeam, filterExec, filterProject, filterStatus, filterPriority, filterSource, sortBy, sortOrder]);
 
   const totalPages = Math.max(1, Math.ceil(filteredLeads.length / pageSize));
   const paginatedLeads = filteredLeads.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -116,6 +125,17 @@ export const AllLeadsList: React.FC<AllLeadsListProps> = ({
       setSortBy(col);
       setSortOrder('desc');
     }
+  };
+
+  const handleArchiveLead = (lead: Lead) => {
+    storage.archiveLead(lead.id);
+    setArchiveConfirmLead(null);
+    refreshData();
+  };
+
+  const handleUnarchiveLead = (lead: Lead) => {
+    storage.unarchiveLead(lead.id);
+    refreshData();
   };
 
   const getPriorityBadge = (p: LeadPriority) => {
@@ -187,26 +207,60 @@ export const AllLeadsList: React.FC<AllLeadsListProps> = ({
       {/* Top Action Header */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-wrap justify-between items-center gap-3">
         <div>
-          <h2 className="text-base font-bold text-slate-900 tracking-tight">All Customer Leads</h2>
-          <p className="text-xs text-slate-500">
-            Total {leads.length} customer records &bull; Showing {filteredLeads.length} matching leads
+          <div className="flex items-center space-x-3">
+            <h2 className="text-base font-bold text-slate-900 tracking-tight">Customer Leads Master</h2>
+            <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs">
+              <button
+                onClick={() => {
+                  setViewTab('active');
+                  setCurrentPage(1);
+                }}
+                className={`px-3 py-1 rounded-md font-semibold transition-colors ${
+                  viewTab === 'active'
+                    ? 'bg-white text-blue-700 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Active Leads ({activeLeads.length})
+              </button>
+              <button
+                onClick={() => {
+                  setViewTab('archived');
+                  setCurrentPage(1);
+                }}
+                className={`px-3 py-1 rounded-md font-semibold transition-colors ${
+                  viewTab === 'archived'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Archived ({archivedLeads.length})
+              </button>
+            </div>
+          </div>
+          <p className="text-xs text-slate-500 mt-1">
+            {viewTab === 'active'
+              ? `${activeLeads.length} active leads in pipeline`
+              : `${archivedLeads.length} preserved archived customer files`}
           </p>
         </div>
 
         <div className="flex items-center space-x-3">
-          <button
-            onClick={handleExportCSV}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-          >
-            <Download className="w-3.5 h-3.5 text-slate-500" />
-            <span>Export CSV</span>
-          </button>
+          {filteredLeads.length > 0 && (
+            <button
+              onClick={handleExportCSV}
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+            >
+              <Download className="w-3.5 h-3.5 text-slate-500" />
+              <span>Export CSV</span>
+            </button>
+          )}
           <button
             onClick={onNewLeadClick}
             className="flex items-center space-x-1.5 px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition-colors shadow-xs"
           >
             <PlusCircle className="w-4 h-4" />
-            <span>New Lead</span>
+            <span>Create New Lead</span>
           </button>
         </div>
       </div>
@@ -357,16 +411,22 @@ export const AllLeadsList: React.FC<AllLeadsListProps> = ({
         {filteredLeads.length === 0 ? (
           <div className="p-12 text-center">
             <Users className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-            <h3 className="text-sm font-bold text-slate-700">No leads found</h3>
-            <p className="text-xs text-slate-500 mt-1">
-              Try adjusting your search query or filter criteria, or create a new lead.
+            <h3 className="text-sm font-bold text-slate-700">
+              {viewTab === 'active' ? 'No leads found. Create your first lead to get started.' : 'No archived leads found.'}
+            </h3>
+            <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+              {viewTab === 'active'
+                ? 'Create a new customer lead with their requirements, assigned executive, and follow-up plan.'
+                : 'Archived leads will appear here when archived from active records.'}
             </p>
-            <button
-              onClick={onNewLeadClick}
-              className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-lg"
-            >
-              Create New Lead
-            </button>
+            {viewTab === 'active' && (
+              <button
+                onClick={onNewLeadClick}
+                className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-lg shadow-xs"
+              >
+                Create New Lead
+              </button>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -483,13 +543,15 @@ export const AllLeadsList: React.FC<AllLeadsListProps> = ({
                       onClick={(e) => e.stopPropagation()}
                     >
                       <div className="flex items-center justify-end space-x-1">
-                        <button
-                          onClick={() => setFollowupLead(lead)}
-                          title="Record Follow-up"
-                          className="p-1 rounded hover:bg-blue-100 text-blue-600 transition-colors"
-                        >
-                          <Clock className="w-4 h-4" />
-                        </button>
+                        {!lead.archived && (
+                          <button
+                            onClick={() => setFollowupLead(lead)}
+                            title="Record Follow-up"
+                            className="p-1 rounded hover:bg-blue-100 text-blue-600 transition-colors"
+                          >
+                            <Clock className="w-4 h-4" />
+                          </button>
+                        )}
                         <button
                           onClick={() => setPrintLead(lead)}
                           title="Print A4 Customer File"
@@ -504,6 +566,25 @@ export const AllLeadsList: React.FC<AllLeadsListProps> = ({
                         >
                           <Edit className="w-4 h-4" />
                         </button>
+
+                        {lead.archived ? (
+                          <button
+                            onClick={() => handleUnarchiveLead(lead)}
+                            title="Restore to Active Leads"
+                            className="p-1 rounded hover:bg-emerald-100 text-emerald-700 transition-colors"
+                          >
+                            <ArchiveRestore className="w-4 h-4" />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setArchiveConfirmLead(lead)}
+                            title="Archive Lead"
+                            className="p-1 rounded hover:bg-amber-100 text-amber-700 transition-colors"
+                          >
+                            <Archive className="w-4 h-4" />
+                          </button>
+                        )}
+
                         <button
                           onClick={() => setDeleteLead(lead)}
                           title="Delete Lead"
@@ -553,6 +634,40 @@ export const AllLeadsList: React.FC<AllLeadsListProps> = ({
           </div>
         )}
       </div>
+
+      {/* Archive Confirmation Dialog */}
+      {archiveConfirmLead && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl border border-amber-200 max-w-md w-full overflow-hidden">
+            <div className="bg-amber-500 text-white px-5 py-3.5 flex items-center space-x-2">
+              <Archive className="w-5 h-5 text-amber-100" />
+              <h3 className="font-bold text-sm">Archive Customer Lead</h3>
+            </div>
+            <div className="p-5 space-y-3 text-xs text-slate-700">
+              <p>
+                Are you sure you want to archive lead <span className="font-mono font-bold text-slate-900">{archiveConfirmLead.leadId}</span> ({archiveConfirmLead.customerDetails.name})?
+              </p>
+              <p className="text-slate-500 text-[11px]">
+                Archived leads are kept safely in your database for records and reporting, but will not show in active daily follow-ups. You can unarchive this lead at any time from the "Archived" tab.
+              </p>
+            </div>
+            <div className="bg-slate-50 border-t border-slate-200 px-5 py-3 flex justify-end space-x-2">
+              <button
+                onClick={() => setArchiveConfirmLead(null)}
+                className="px-3.5 py-1.5 border rounded bg-white text-slate-700 hover:bg-slate-100 font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleArchiveLead(archiveConfirmLead)}
+                className="px-4 py-1.5 bg-amber-600 text-white rounded font-bold hover:bg-amber-700 shadow-xs"
+              >
+                Archive Lead
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Quick Action Modals */}
       {followupLead && (

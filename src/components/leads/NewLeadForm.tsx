@@ -11,12 +11,18 @@ import {
 } from '../../types';
 import { getTodayDateString, storage } from '../../services/storage';
 import {
+  AlertCircle,
+  AlertTriangle,
   Building,
   CheckCircle2,
   ChevronRight,
+  ExternalLink,
+  Eye,
   FileText,
   MapPin,
   Phone,
+  Plus,
+  PlusCircle,
   Printer,
   Sparkles,
   User,
@@ -29,12 +35,14 @@ interface NewLeadFormProps {
   initialLead?: Lead | null;
   onSaveSuccess: (lead: Lead, shouldPrint?: boolean) => void;
   onCancel: () => void;
+  onViewLead?: (leadId: string) => void;
 }
 
 export const NewLeadForm: React.FC<NewLeadFormProps> = ({
   initialLead,
   onSaveSuccess,
   onCancel,
+  onViewLead,
 }) => {
   const isEditing = Boolean(initialLead);
   const today = getTodayDateString();
@@ -46,12 +54,21 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
   const [leadSources, setLeadSources] = useState(storage.getLeadSources().filter(s => s.active));
   const [units, setUnits] = useState(storage.getPreferredUnits().filter(u => u.active));
 
+  // Quick Inline Master Creation Modals
+  const [showQuickProjectModal, setShowQuickProjectModal] = useState(false);
+  const [quickProjectName, setQuickProjectName] = useState('');
+  const [quickProjectLocation, setQuickProjectLocation] = useState('');
+
+  const [showQuickTeamModal, setShowQuickTeamModal] = useState(false);
+  const [quickTeamName, setQuickTeamName] = useState('');
+  const [quickExecName, setQuickExecName] = useState('');
+
   // Lead Identification
   const [leadId, setLeadId] = useState(initialLead ? initialLead.leadId : '');
   const [leadDate, setLeadDate] = useState(initialLead ? initialLead.leadDate : today);
   const [leadSource, setLeadSource] = useState(initialLead ? initialLead.leadSource : (leadSources[0]?.name || 'Reference'));
   const [interestedProject, setInterestedProject] = useState(
-    initialLead ? initialLead.interestedProject : (projects[0]?.projectName || 'By The Garden')
+    initialLead ? initialLead.interestedProject : (projects[0]?.projectName || '')
   );
   const [status, setStatus] = useState<LeadStatus>(initialLead ? initialLead.status : 'New');
   const [priority, setPriority] = useState<LeadPriority>(initialLead ? initialLead.priority : 'Hot');
@@ -69,19 +86,27 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
     initialLead ? initialLead.customerDetails.customerType : 'Salaried'
   );
 
+  // Duplicate warning state
+  const [duplicateWarning, setDuplicateWarning] = useState<{
+    isDuplicate: boolean;
+    matchedLead?: Lead;
+    matchReason?: string;
+  } | null>(null);
+  const [dismissDuplicate, setDismissDuplicate] = useState(false);
+
   // Address Details - Residential
   const [resAddress, setResAddress] = useState(initialLead ? initialLead.residentialAddress.address : '');
   const [resArea, setResArea] = useState(initialLead ? initialLead.residentialAddress.area : '');
-  const [resCity, setResCity] = useState(initialLead ? initialLead.residentialAddress.city : 'Ahmedabad');
-  const [resState, setResState] = useState(initialLead ? initialLead.residentialAddress.state : 'Gujarat');
+  const [resCity, setResCity] = useState(initialLead ? initialLead.residentialAddress.city : '');
+  const [resState, setResState] = useState(initialLead ? initialLead.residentialAddress.state : '');
   const [resPincode, setResPincode] = useState(initialLead ? initialLead.residentialAddress.pincode : '');
 
   // Address Details - Work
   const [workCompany, setWorkCompany] = useState(initialLead ? initialLead.workAddress.company : '');
   const [workAddress, setWorkAddress] = useState(initialLead ? initialLead.workAddress.workAddress : '');
   const [workArea, setWorkArea] = useState(initialLead ? initialLead.workAddress.workArea : '');
-  const [workCity, setWorkCity] = useState(initialLead ? initialLead.workAddress.city : 'Ahmedabad');
-  const [workState, setWorkState] = useState(initialLead ? initialLead.workAddress.state : 'Gujarat');
+  const [workCity, setWorkCity] = useState(initialLead ? initialLead.workAddress.city : '');
+  const [workState, setWorkState] = useState(initialLead ? initialLead.workAddress.state : '');
   const [workPincode, setWorkPincode] = useState(initialLead ? initialLead.workAddress.pincode : '');
   const [designation, setDesignation] = useState(initialLead ? (initialLead.workAddress.designation || '') : '');
 
@@ -90,7 +115,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
     initialLead ? initialLead.propertyRequirement.requirementType : 'Residential'
   );
   const [prefUnit, setPrefUnit] = useState(
-    initialLead ? initialLead.propertyRequirement.preferredUnit : (units[1]?.name || '3 BHK Premium Apartment')
+    initialLead ? initialLead.propertyRequirement.preferredUnit : (units[0]?.name || '')
   );
   const [prefLocation, setPrefLocation] = useState(initialLead ? (initialLead.propertyRequirement.preferredLocation || '') : '');
   const [minBudget, setMinBudget] = useState<string>(
@@ -114,14 +139,14 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
     initialLead && initialLead.financialProfile.approxBudget ? String(initialLead.financialProfile.approxBudget) : ''
   );
   const [fundingType, setFundingType] = useState<FundingType>(
-    initialLead ? initialLead.financialProfile.fundingType : 'Partly Loan'
+    initialLead ? initialLead.financialProfile.fundingType : 'Self Funded'
   );
   const [existingProperty, setExistingProperty] = useState(initialLead ? (initialLead.financialProfile.existingProperty || '') : '');
   const [sellingExisting, setSellingExisting] = useState(initialLead ? (initialLead.financialProfile.sellingExistingProperty || 'No') : 'No');
-  const [investmentPurpose, setInvestmentPurpose] = useState(initialLead ? (initialLead.financialProfile.investmentPurpose || 'End Use for Family') : 'End Use for Family');
+  const [investmentPurpose, setInvestmentPurpose] = useState(initialLead ? (initialLead.financialProfile.investmentPurpose || '') : '');
   const [decisionMaker, setDecisionMaker] = useState(initialLead ? (initialLead.financialProfile.decisionMaker || 'Self') : 'Self');
-  const [familyInvolvement, setFamilyInvolvement] = useState(initialLead ? (initialLead.financialProfile.familyInvolvement || 'High') : 'High');
-  const [purchaseUrgency, setPurchaseUrgency] = useState(initialLead ? (initialLead.financialProfile.purchaseUrgency || 'High') : 'High');
+  const [familyInvolvement, setFamilyInvolvement] = useState(initialLead ? (initialLead.financialProfile.familyInvolvement || 'Medium') : 'Medium');
+  const [purchaseUrgency, setPurchaseUrgency] = useState(initialLead ? (initialLead.financialProfile.purchaseUrgency || 'Normal') : 'Normal');
 
   // Assignment
   const [selectedTeamId, setSelectedTeamId] = useState(
@@ -154,16 +179,14 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
   const [initialNextFollowupDate, setInitialNextFollowupDate] = useState('');
 
   // Form State
-  const [activeSection, setActiveSection] = useState<'all' | 'customer' | 'requirement' | 'financial' | 'assignment'>('all');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Auto-generate next Lead ID if creating new
+  // Auto-generate next Lead ID preview if creating new
   useEffect(() => {
     if (!isEditing && !leadId) {
-      // preview ID without incrementing storage counter yet
       const settings = storage.getSettings();
-      const prefix = settings.leadIdPrefix || 'BTG';
+      const prefix = settings.leadIdPrefix || 'BM';
       const num = settings.nextLeadNumber || 1;
       setLeadId(`${prefix}-${String(num).padStart(6, '0')}`);
     }
@@ -182,20 +205,107 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
     }
   }, [selectedTeamId, filteredExecutives, selectedExecutiveId]);
 
+  // Duplicate Check logic
+  const performDuplicateCheck = (currMobile: string, currWhatsapp: string, currName: string) => {
+    if (dismissDuplicate || isEditing) return;
+    if (currMobile.trim().length >= 8 || currWhatsapp.trim().length >= 8) {
+      const res = storage.checkDuplicateLead(currMobile, currWhatsapp, currName, initialLead?.id);
+      if (res.isDuplicate) {
+        setDuplicateWarning(res);
+      } else {
+        setDuplicateWarning(null);
+      }
+    } else {
+      setDuplicateWarning(null);
+    }
+  };
+
+  const handleMobileChange = (val: string) => {
+    setMobile(val);
+    if (errors.mobile) setErrors({ ...errors, mobile: '' });
+    performDuplicateCheck(val, whatsapp, name);
+  };
+
+  const handleWhatsAppChange = (val: string) => {
+    setWhatsapp(val);
+    performDuplicateCheck(mobile, val, name);
+  };
+
+  const handleNameChange = (val: string) => {
+    setName(val);
+    if (errors.name) setErrors({ ...errors, name: '' });
+    performDuplicateCheck(mobile, whatsapp, val);
+  };
+
+  // Quick Project Add
+  const handleQuickAddProject = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickProjectName.trim()) return;
+    const newProj = storage.addProject(quickProjectName.trim(), quickProjectLocation.trim() || 'Prime Location');
+    const updated = storage.getProjects().filter(p => p.active);
+    setProjects(updated);
+    setInterestedProject(newProj.projectName);
+    setShowQuickProjectModal(false);
+    setQuickProjectName('');
+    setQuickProjectLocation('');
+  };
+
+  // Quick Team & Executive Add
+  const handleQuickAddTeam = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickTeamName.trim()) return;
+    const newTeam = storage.addTeam(quickTeamName.trim());
+    let newExec = null;
+    if (quickExecName.trim()) {
+      newExec = storage.addExecutive({
+        name: quickExecName.trim(),
+        teamId: newTeam.id,
+        teamName: newTeam.teamName,
+        active: true,
+      });
+    }
+    const updatedTeams = storage.getTeams().filter(t => t.active);
+    const updatedExecs = storage.getExecutives().filter(e => e.active);
+    setTeams(updatedTeams);
+    setAllExecutives(updatedExecs);
+    setSelectedTeamId(newTeam.id);
+    if (newExec) {
+      setSelectedExecutiveId(newExec.id);
+    }
+    setShowQuickTeamModal(false);
+    setQuickTeamName('');
+    setQuickExecName('');
+  };
+
   const validate = () => {
     const errs: Record<string, string> = {};
     if (!name.trim()) errs.name = 'Customer Name is required';
     if (!mobile.trim()) {
       errs.mobile = 'Mobile Number is required';
     } else if (mobile.trim().length < 8) {
-      errs.mobile = 'Enter a valid mobile number';
+      errs.mobile = 'Please enter a valid mobile number (min 8 digits)';
     }
+
+    if (email.trim() && !email.includes('@')) {
+      errs.email = 'Please enter a valid email address';
+    }
+
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
   const handleSave = (shouldPrint = false) => {
     if (!validate()) return;
+
+    // Duplicate protection check
+    if (!isEditing && !dismissDuplicate) {
+      const dup = storage.checkDuplicateLead(mobile, whatsapp, name);
+      if (dup.isDuplicate) {
+        setDuplicateWarning(dup);
+        return;
+      }
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -203,10 +313,10 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
       const selectedExec = allExecutives.find(e => e.id === selectedExecutiveId);
 
       const parsedLeadData = {
-        leadId: isEditing ? leadId : storage.generateNextLeadId(), // finalize generated ID
+        leadId: isEditing ? leadId : storage.generateNextLeadId(),
         leadDate,
-        leadSource,
-        interestedProject,
+        leadSource: leadSource || 'Other',
+        interestedProject: interestedProject || 'Unspecified',
         status,
         priority,
 
@@ -243,7 +353,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
         propertyRequirement: {
           requirementType: reqType,
           preferredUnit: prefUnit,
-          interestedProject,
+          interestedProject: interestedProject || 'Unspecified',
           preferredLocation: prefLocation.trim() || undefined,
           minBudget: minBudget ? parseFloat(minBudget) : undefined,
           maxBudget: maxBudget ? parseFloat(maxBudget) : undefined,
@@ -263,9 +373,9 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
           purchaseUrgency,
         },
 
-        teamId: selectedTeamId,
+        teamId: selectedTeamId || '',
         teamName: selectedTeam?.teamName || 'Unassigned',
-        executiveId: selectedExecutiveId,
+        executiveId: selectedExecutiveId || '',
         executiveName: selectedExec?.name || 'Unassigned',
         assignedDate: isEditing ? initialLead!.assignedDate : today,
 
@@ -277,6 +387,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
         },
 
         managementNotes: managementNotes.trim() || undefined,
+        archived: false,
       };
 
       let savedLead: Lead;
@@ -296,7 +407,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
 
       onSaveSuccess(savedLead, shouldPrint);
     } catch (err) {
-      setErrors({ form: 'Unable to save lead. Please check your inputs and try again.' });
+      setErrors({ form: 'Unable to save the lead. Please try again. Your existing data has not been changed.' });
     } finally {
       setIsSubmitting(false);
     }
@@ -316,7 +427,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
             </h2>
           </div>
           <p className="text-xs text-slate-400 mt-0.5">
-            Organized multi-section desktop form with automatic ID generation and filtered executive assignment
+            Organized multi-section form with automatic Lead ID and duplicate customer protection
           </p>
         </div>
 
@@ -351,15 +462,90 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
         </div>
       </div>
 
+      {/* Duplicate Protection Warning Banner */}
+      {duplicateWarning && duplicateWarning.isDuplicate && duplicateWarning.matchedLead && (
+        <div className="bg-amber-50 border-b border-amber-200 p-4 flex items-start justify-between">
+          <div className="flex items-start space-x-3">
+            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <h4 className="text-xs font-bold text-amber-900 uppercase tracking-wide">
+                A similar customer already exists
+              </h4>
+              <p className="text-xs text-amber-800 mt-0.5">
+                {duplicateWarning.matchReason}: Existing Lead <span className="font-mono font-bold">{duplicateWarning.matchedLead.leadId}</span> belongs to <span className="font-bold">{duplicateWarning.matchedLead.customerDetails.name}</span> ({duplicateWarning.matchedLead.customerDetails.mobile}).
+              </p>
+              <p className="text-[11px] text-amber-700 mt-1">
+                Please verify if this is an update to an existing customer record rather than a new duplicate.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2 shrink-0 ml-4">
+            {onViewLead && (
+              <button
+                type="button"
+                onClick={() => onViewLead(duplicateWarning.matchedLead!.id)}
+                className="px-3 py-1 bg-white border border-amber-300 text-amber-900 rounded text-xs font-semibold hover:bg-amber-100 flex items-center space-x-1"
+              >
+                <Eye className="w-3.5 h-3.5" />
+                <span>Review Existing Lead</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setDismissDuplicate(true)}
+              className="px-3 py-1 bg-amber-600 text-white rounded text-xs font-semibold hover:bg-amber-700"
+            >
+              Proceed Anyway
+            </button>
+          </div>
+        </div>
+      )}
+
       {errors.form && (
         <div className="bg-red-50 border-b border-red-200 px-6 py-2.5 text-red-700 text-xs font-medium">
           {errors.form}
         </div>
       )}
 
+      {/* Real-world Master Data notices if zero exist */}
+      {(projects.length === 0 || teams.length === 0) && (
+        <div className="bg-blue-50/70 border-b border-blue-200 px-6 py-3 flex items-center justify-between text-xs text-blue-900">
+          <div className="flex items-center space-x-2">
+            <Sparkles className="w-4 h-4 text-blue-600" />
+            <span>
+              {projects.length === 0 && teams.length === 0
+                ? 'Tip: You can create your real Projects, Teams, and Sales Executives right here on the fly.'
+                : projects.length === 0
+                ? 'Tip: No projects added yet. Click "+ Add Project" to define your first real estate project.'
+                : 'Tip: No teams added yet. Click "+ Add Team" to define sales teams for lead assignment.'}
+            </span>
+          </div>
+          <div className="flex items-center space-x-2">
+            {projects.length === 0 && (
+              <button
+                type="button"
+                onClick={() => setShowQuickProjectModal(true)}
+                className="px-2.5 py-1 bg-white border border-blue-300 rounded font-semibold text-blue-700 hover:bg-blue-50 text-[11px]"
+              >
+                + Add Project
+              </button>
+            )}
+            {teams.length === 0 && (
+              <button
+                type="button"
+                onClick={() => setShowQuickTeamModal(true)}
+                className="px-2.5 py-1 bg-white border border-blue-300 rounded font-semibold text-blue-700 hover:bg-blue-50 text-[11px]"
+              >
+                + Add Team & Exec
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Form Content */}
       <div className="p-6 space-y-6">
-        {/* Section 1: Lead Identification & Assignment (Top Priority Grid) */}
+        {/* Section 1: Lead Identification & Assignment */}
         <div className="bg-slate-50/70 p-4 rounded-lg border border-slate-200">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 pb-2 mb-3 border-b border-slate-200 flex items-center space-x-2">
             <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px]">1</span>
@@ -386,17 +572,30 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
               />
             </div>
             <div>
-              <label className="block text-slate-600 font-medium mb-1">Interested Project</label>
+              <div className="flex justify-between items-center mb-1">
+                <label className="block text-slate-600 font-medium">Interested Project</label>
+                <button
+                  type="button"
+                  onClick={() => setShowQuickProjectModal(true)}
+                  className="text-[10px] text-blue-600 hover:text-blue-800 font-bold"
+                >
+                  + New
+                </button>
+              </div>
               <select
                 value={interestedProject}
                 onChange={(e) => setInterestedProject(e.target.value)}
                 className="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 font-medium focus:ring-1 focus:ring-blue-500"
               >
-                {projects.map((p) => (
-                  <option key={p.id} value={p.projectName}>
-                    {p.projectName}
-                  </option>
-                ))}
+                {projects.length === 0 ? (
+                  <option value="">(No projects yet - click + New)</option>
+                ) : (
+                  projects.map((p) => (
+                    <option key={p.id} value={p.projectName}>
+                      {p.projectName}
+                    </option>
+                  ))
+                )}
               </select>
             </div>
             <div>
@@ -450,25 +649,38 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
           {/* Assignment Dropdowns Filtered by Team */}
           <div className="grid grid-cols-3 gap-4 mt-3 pt-3 border-t border-slate-200 text-xs">
             <div>
-              <label className="block text-slate-700 font-semibold mb-1">
-                Assign Team <span className="text-blue-600">*</span>
-              </label>
+              <div className="flex justify-between items-center mb-1">
+                <label className="block text-slate-700 font-semibold">
+                  Assign Team
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowQuickTeamModal(true)}
+                  className="text-[10px] text-blue-600 hover:text-blue-800 font-bold"
+                >
+                  + New Team
+                </button>
+              </div>
               <select
                 value={selectedTeamId}
                 onChange={(e) => setSelectedTeamId(e.target.value)}
                 className="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 font-medium focus:ring-1 focus:ring-blue-500"
               >
-                {teams.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.teamName}
-                  </option>
-                ))}
+                {teams.length === 0 ? (
+                  <option value="">(No teams created yet)</option>
+                ) : (
+                  teams.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.teamName}
+                    </option>
+                  ))
+                )}
               </select>
             </div>
 
             <div>
               <label className="block text-slate-700 font-semibold mb-1">
-                Assign Sales Executive (Filtered) <span className="text-blue-600">*</span>
+                Assign Sales Executive (Filtered)
               </label>
               <select
                 value={selectedExecutiveId}
@@ -476,7 +688,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
                 className="w-full bg-white border border-blue-300 rounded px-2.5 py-1.5 font-bold text-blue-900 focus:ring-1 focus:ring-blue-500"
               >
                 {filteredExecutives.length === 0 ? (
-                  <option value="">No executives in this team</option>
+                  <option value="">(No executives in this team)</option>
                 ) : (
                   filteredExecutives.map((exec) => (
                     <option key={exec.id} value={exec.id}>
@@ -525,11 +737,8 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
               <input
                 type="text"
                 value={name}
-                onChange={(e) => {
-                  setName(e.target.value);
-                  if (errors.name) setErrors({ ...errors, name: '' });
-                }}
-                placeholder="e.g. Rajesh Kumar"
+                onChange={(e) => handleNameChange(e.target.value)}
+                placeholder="Full Customer Name"
                 className={`w-full px-2.5 py-1.5 rounded border focus:ring-1 ${
                   errors.name ? 'border-red-500 bg-red-50' : 'border-slate-300 focus:border-blue-500'
                 }`}
@@ -544,10 +753,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
               <input
                 type="tel"
                 value={mobile}
-                onChange={(e) => {
-                  setMobile(e.target.value);
-                  if (errors.mobile) setErrors({ ...errors, mobile: '' });
-                }}
+                onChange={(e) => handleMobileChange(e.target.value)}
                 placeholder="e.g. 9825012345"
                 className={`w-full px-2.5 py-1.5 rounded border font-mono ${
                   errors.mobile ? 'border-red-500 bg-red-50' : 'border-slate-300 focus:border-blue-500'
@@ -562,7 +768,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
                 type="tel"
                 value={altMobile}
                 onChange={(e) => setAltMobile(e.target.value)}
-                placeholder="Optional secondary contact"
+                placeholder="Secondary contact"
                 className="w-full px-2.5 py-1.5 rounded border border-slate-300 font-mono focus:border-blue-500"
               />
             </div>
@@ -572,7 +778,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
               <input
                 type="tel"
                 value={whatsapp}
-                onChange={(e) => setWhatsapp(e.target.value)}
+                onChange={(e) => handleWhatsAppChange(e.target.value)}
                 placeholder="Leave blank if same as mobile"
                 className="w-full px-2.5 py-1.5 rounded border border-slate-300 font-mono focus:border-blue-500"
               />
@@ -583,10 +789,16 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="e.g. rajesh@example.com"
-                className="w-full px-2.5 py-1.5 rounded border border-slate-300 focus:border-blue-500"
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (errors.email) setErrors({ ...errors, email: '' });
+                }}
+                placeholder="e.g. customer@example.com"
+                className={`w-full px-2.5 py-1.5 rounded border ${
+                  errors.email ? 'border-red-500 bg-red-50' : 'border-slate-300 focus:border-blue-500'
+                }`}
               />
+              {errors.email && <p className="text-[10px] text-red-600 mt-0.5">{errors.email}</p>}
             </div>
 
             <div>
@@ -605,7 +817,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
                 type="text"
                 value={occupation}
                 onChange={(e) => setOccupation(e.target.value)}
-                placeholder="e.g. IT Director, Architect, Merchant"
+                placeholder="e.g. IT Director, Architect, Doctor"
                 className="w-full px-2.5 py-1.5 rounded border border-slate-300 focus:border-blue-500"
               />
             </div>
@@ -644,7 +856,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
                   type="text"
                   value={resAddress}
                   onChange={(e) => setResAddress(e.target.value)}
-                  placeholder="e.g. B-402, Shivalik Residency, Judges Bunglow Rd"
+                  placeholder="Street / Society address"
                   className="w-full px-2.5 py-1.5 rounded border border-slate-300 focus:border-blue-500"
                 />
               </div>
@@ -655,7 +867,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
                     type="text"
                     value={resArea}
                     onChange={(e) => setResArea(e.target.value)}
-                    placeholder="e.g. Bodakdev"
+                    placeholder="Area name"
                     className="w-full px-2.5 py-1.5 rounded border border-slate-300 focus:border-blue-500"
                   />
                 </div>
@@ -665,6 +877,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
                     type="text"
                     value={resCity}
                     onChange={(e) => setResCity(e.target.value)}
+                    placeholder="City"
                     className="w-full px-2.5 py-1.5 rounded border border-slate-300 focus:border-blue-500"
                   />
                 </div>
@@ -674,6 +887,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
                     type="text"
                     value={resState}
                     onChange={(e) => setResState(e.target.value)}
+                    placeholder="State"
                     className="w-full px-2.5 py-1.5 rounded border border-slate-300 focus:border-blue-500"
                   />
                 </div>
@@ -683,7 +897,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
                     type="text"
                     value={resPincode}
                     onChange={(e) => setResPincode(e.target.value)}
-                    placeholder="e.g. 380054"
+                    placeholder="Postal PIN"
                     className="w-full px-2.5 py-1.5 rounded border border-slate-300 focus:border-blue-500"
                   />
                 </div>
@@ -705,7 +919,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
                     type="text"
                     value={workCompany}
                     onChange={(e) => setWorkCompany(e.target.value)}
-                    placeholder="e.g. Apex Tech Solutions Ltd."
+                    placeholder="Employer or Business"
                     className="w-full px-2.5 py-1.5 rounded border border-slate-300 focus:border-blue-500"
                   />
                 </div>
@@ -715,7 +929,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
                     type="text"
                     value={designation}
                     onChange={(e) => setDesignation(e.target.value)}
-                    placeholder="e.g. VP Engineering, Managing Partner"
+                    placeholder="Job Title"
                     className="w-full px-2.5 py-1.5 rounded border border-slate-300 focus:border-blue-500"
                   />
                 </div>
@@ -726,7 +940,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
                   type="text"
                   value={workAddress}
                   onChange={(e) => setWorkAddress(e.target.value)}
-                  placeholder="e.g. 8th Floor, Pinnacle Business Park"
+                  placeholder="Office premise address"
                   className="w-full px-2.5 py-1.5 rounded border border-slate-300 focus:border-blue-500"
                 />
               </div>
@@ -737,7 +951,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
                     type="text"
                     value={workArea}
                     onChange={(e) => setWorkArea(e.target.value)}
-                    placeholder="e.g. Prahlad Nagar"
+                    placeholder="Area"
                     className="w-full px-2.5 py-1.5 rounded border border-slate-300 focus:border-blue-500"
                   />
                 </div>
@@ -747,6 +961,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
                     type="text"
                     value={workCity}
                     onChange={(e) => setWorkCity(e.target.value)}
+                    placeholder="City"
                     className="w-full px-2.5 py-1.5 rounded border border-slate-300 focus:border-blue-500"
                   />
                 </div>
@@ -756,6 +971,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
                     type="text"
                     value={workPincode}
                     onChange={(e) => setWorkPincode(e.target.value)}
+                    placeholder="PIN Code"
                     className="w-full px-2.5 py-1.5 rounded border border-slate-300 focus:border-blue-500"
                   />
                 </div>
@@ -821,7 +1037,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
                   type="number"
                   value={minBudget}
                   onChange={(e) => setMinBudget(e.target.value)}
-                  placeholder="e.g. 12500000"
+                  placeholder="Min budget"
                   className="w-full px-2.5 py-1.5 rounded border border-slate-300 font-mono focus:border-blue-500"
                 />
               </div>
@@ -832,7 +1048,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
                   type="number"
                   value={maxBudget}
                   onChange={(e) => setMaxBudget(e.target.value)}
-                  placeholder="e.g. 15000000"
+                  placeholder="Max budget"
                   className="w-full px-2.5 py-1.5 rounded border border-slate-300 font-mono focus:border-blue-500"
                 />
               </div>
@@ -889,7 +1105,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
                   type="number"
                   value={approxBudget}
                   onChange={(e) => setApproxBudget(e.target.value)}
-                  placeholder="e.g. 14000000"
+                  placeholder="Budget"
                   className="w-full px-2.5 py-1.5 rounded border border-slate-300 font-mono font-semibold text-emerald-800 focus:border-blue-500"
                 />
               </div>
@@ -914,7 +1130,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
                   type="text"
                   value={existingProperty}
                   onChange={(e) => setExistingProperty(e.target.value)}
-                  placeholder="e.g. Owns 2 BHK in Satellite"
+                  placeholder="Details of existing property"
                   className="w-full px-2.5 py-1.5 rounded border border-slate-300 focus:border-blue-500"
                 />
               </div>
@@ -938,7 +1154,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
                   type="text"
                   value={decisionMaker}
                   onChange={(e) => setDecisionMaker(e.target.value)}
-                  placeholder="e.g. Self & Spouse, Father"
+                  placeholder="e.g. Self, Family, Joint"
                   className="w-full px-2.5 py-1.5 rounded border border-slate-300 focus:border-blue-500"
                 />
               </div>
@@ -962,7 +1178,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
                   type="text"
                   value={investmentPurpose}
                   onChange={(e) => setInvestmentPurpose(e.target.value)}
-                  placeholder="e.g. End use for self & family, Rental return, Upgrade"
+                  placeholder="e.g. End use for self, Rental return, Upgrade"
                   className="w-full px-2.5 py-1.5 rounded border border-slate-300 focus:border-blue-500"
                 />
               </div>
@@ -983,7 +1199,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
                 type="text"
                 value={referredBy}
                 onChange={(e) => setReferredBy(e.target.value)}
-                placeholder="e.g. Dr. Manish Trivedi, Hoarding at Cross Road"
+                placeholder="Reference person or advertisement location"
                 className="w-full px-2.5 py-1.5 rounded border border-slate-300 focus:border-blue-500"
               />
             </div>
@@ -1002,7 +1218,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
                 rows={2}
                 value={initialNotes}
                 onChange={(e) => setInitialNotes(e.target.value)}
-                placeholder="Brief summary of initial phone or in-person greeting..."
+                placeholder="Summary of initial greeting or discussion..."
                 className="w-full px-2.5 py-1.5 rounded border border-slate-300 focus:border-blue-500"
               />
             </div>
@@ -1012,7 +1228,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
                 rows={2}
                 value={managementNotes}
                 onChange={(e) => setManagementNotes(e.target.value)}
-                placeholder="Observations, VIP requirements, special price leeway..."
+                placeholder="Management observations, negotiation leeway..."
                 className="w-full px-2.5 py-1.5 rounded border border-slate-300 focus:border-blue-500"
               />
             </div>
@@ -1041,7 +1257,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
                       type="text"
                       value={initialFollowupRemark}
                       onChange={(e) => setInitialFollowupRemark(e.target.value)}
-                      placeholder="e.g. Called customer. Discussed 3 BHK layouts and sent brochure on WhatsApp."
+                      placeholder="e.g. Spoke with client, shared project details, scheduled site meeting."
                       className="w-full px-2.5 py-1.5 bg-white rounded border border-slate-300 text-xs focus:border-blue-500"
                     />
                   </div>
@@ -1065,7 +1281,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
         {/* Footer Actions */}
         <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 flex justify-between items-center">
           <p className="text-xs text-slate-500">
-            * Customer Name & Mobile are required. Lead ID is automatically generated.
+            * Customer Name & Mobile are required. Lead ID will be generated uniquely.
           </p>
 
           <div className="flex items-center space-x-3">
@@ -1099,6 +1315,108 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Quick Add Project Modal */}
+      {showQuickProjectModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl border border-slate-200 max-w-sm w-full overflow-hidden">
+            <div className="bg-slate-900 text-white px-4 py-3 flex justify-between items-center text-xs font-bold">
+              <span>Add Real Project</span>
+              <button onClick={() => setShowQuickProjectModal(false)}><X className="w-4 h-4" /></button>
+            </div>
+            <form onSubmit={handleQuickAddProject} className="p-4 space-y-3 text-xs">
+              <div>
+                <label className="block font-semibold mb-1">Project Name *</label>
+                <input
+                  type="text"
+                  value={quickProjectName}
+                  onChange={(e) => setQuickProjectName(e.target.value)}
+                  placeholder="e.g. Riverfront Terraces"
+                  required
+                  autoFocus
+                  className="w-full px-2.5 py-1.5 border rounded"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold mb-1">Location</label>
+                <input
+                  type="text"
+                  value={quickProjectLocation}
+                  onChange={(e) => setQuickProjectLocation(e.target.value)}
+                  placeholder="e.g. West Coast Road"
+                  className="w-full px-2.5 py-1.5 border rounded"
+                />
+              </div>
+              <div className="flex justify-end space-x-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowQuickProjectModal(false)}
+                  className="px-3 py-1.5 border rounded"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 bg-blue-600 text-white rounded font-bold"
+                >
+                  Save Project
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Add Team & Executive Modal */}
+      {showQuickTeamModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl border border-slate-200 max-w-sm w-full overflow-hidden">
+            <div className="bg-slate-900 text-white px-4 py-3 flex justify-between items-center text-xs font-bold">
+              <span>Create Sales Team & Executive</span>
+              <button onClick={() => setShowQuickTeamModal(false)}><X className="w-4 h-4" /></button>
+            </div>
+            <form onSubmit={handleQuickAddTeam} className="p-4 space-y-3 text-xs">
+              <div>
+                <label className="block font-semibold mb-1">Team Name *</label>
+                <input
+                  type="text"
+                  value={quickTeamName}
+                  onChange={(e) => setQuickTeamName(e.target.value)}
+                  placeholder="e.g. Residential Sales Team 1"
+                  required
+                  autoFocus
+                  className="w-full px-2.5 py-1.5 border rounded"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold mb-1">Initial Sales Executive Name</label>
+                <input
+                  type="text"
+                  value={quickExecName}
+                  onChange={(e) => setQuickExecName(e.target.value)}
+                  placeholder="e.g. Amit Sharma"
+                  className="w-full px-2.5 py-1.5 border rounded"
+                />
+              </div>
+              <div className="flex justify-end space-x-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowQuickTeamModal(false)}
+                  className="px-3 py-1.5 border rounded"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 bg-blue-600 text-white rounded font-bold"
+                >
+                  Save Team
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

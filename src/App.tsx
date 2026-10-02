@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { NavItem, Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import { Dashboard } from './components/dashboard/Dashboard';
+import { TargetSetter } from './components/targets/TargetSetter';
 import { AllLeadsList } from './components/leads/AllLeadsList';
 import { NewLeadForm } from './components/leads/NewLeadForm';
 import { LeadProfileModal } from './components/leads/LeadProfileModal';
@@ -119,6 +120,9 @@ export default function App() {
                 setEditingLead(null);
                 setCurrentTab('leads');
               }}
+              onViewLead={(leadId) => {
+                setSelectedLeadId(leadId);
+              }}
             />
           )}
 
@@ -129,6 +133,11 @@ export default function App() {
               onNavigate={(view) => setCurrentTab(view as NavItem)}
               onNewLeadClick={() => setCurrentTab('new-lead')}
             />
+          )}
+
+          {/* Target Setter */}
+          {currentTab === 'target-setter' && !editingLead && (
+            <TargetSetter onTargetsUpdated={refreshData} />
           )}
 
           {/* All Leads */}

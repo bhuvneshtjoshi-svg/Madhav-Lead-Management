@@ -146,107 +146,138 @@ export const TeamsExecutives: React.FC = () => {
       </div>
 
       {/* Team Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {teams.map((team) => {
-          const teamExecs = executives.filter(e => e.teamId === team.id);
-          return (
-            <div
-              key={team.id}
-              className={`bg-white rounded-xl border transition-all ${
-                team.active ? 'border-slate-200 shadow-xs' : 'border-slate-200 opacity-60 bg-slate-50'
-              }`}
-            >
-              {/* Team Card Header */}
-              <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/70">
-                <div className="flex items-center space-x-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
-                  <h3 className="font-bold text-sm text-slate-900">{team.teamName}</h3>
-                  <span className="text-[11px] bg-white border border-slate-200 text-slate-600 px-2 py-0.5 rounded-full font-semibold">
-                    {teamExecs.length} {teamExecs.length === 1 ? 'Executive' : 'Executives'}
-                  </span>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => handleOpenTeamModal(team)}
-                    className="p-1 text-slate-400 hover:text-slate-700"
-                    title="Edit Team Name"
-                  >
-                    <Edit className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => handleToggleTeamActive(team)}
-                    className={`text-xs px-2 py-0.5 rounded font-medium ${
-                      team.active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-200 text-slate-600'
-                    }`}
-                  >
-                    {team.active ? 'Active' : 'Inactive'}
-                  </button>
-                </div>
-              </div>
-
-              {/* Executives in this team */}
-              <div className="p-4">
-                {teamExecs.length === 0 ? (
-                  <p className="text-xs text-slate-400 italic py-2">No executives assigned to this team.</p>
-                ) : (
-                  <div className="divide-y divide-slate-100">
-                    {teamExecs.map((exec) => (
-                      <div key={exec.id} className="py-2.5 flex justify-between items-center text-xs">
-                        <div>
-                          <div className="font-semibold text-slate-900 flex items-center space-x-2">
-                            <span>{exec.name}</span>
-                            {!exec.active && (
-                              <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.2 rounded">
-                                Inactive
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center space-x-3 text-[11px] text-slate-500 mt-0.5">
-                            {exec.mobile && (
-                              <span className="flex items-center space-x-1 font-mono">
-                                <Phone className="w-3 h-3 text-slate-400" />
-                                <span>{exec.mobile}</span>
-                              </span>
-                            )}
-                            {exec.email && (
-                              <span className="flex items-center space-x-1">
-                                <Mail className="w-3 h-3 text-slate-400" />
-                                <span>{exec.email}</span>
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="flex items-center space-x-1">
-                          <button
-                            onClick={() => handleOpenExecModal(exec)}
-                            className="p-1 hover:bg-slate-100 rounded text-slate-500 hover:text-slate-800"
-                            title="Edit / Move Team"
-                          >
-                            <Edit className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleToggleExecActive(exec)}
-                            className="p-1 text-slate-400 hover:text-slate-700"
-                            title={exec.active ? 'Deactivate' : 'Activate'}
-                          >
-                            {exec.active ? (
-                              <ToggleRight className="w-5 h-5 text-emerald-600" />
-                            ) : (
-                              <ToggleLeft className="w-5 h-5 text-slate-400" />
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+      {teams.length === 0 ? (
+        <div className="bg-white rounded-xl border border-slate-200 p-12 text-center shadow-xs">
+          <Users className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+          <h3 className="text-sm font-bold text-slate-800">No teams created yet</h3>
+          <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+            Create your sales divisions or marketing teams (e.g., "Direct Sales", "Channel Sales", "Team A"). Once created, you can assign sales executives.
+          </p>
+          <button
+            onClick={() => handleOpenTeamModal()}
+            className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-lg shadow-xs"
+          >
+            Create First Team
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {teams.map((team) => {
+            const teamExecs = executives.filter(e => e.teamId === team.id);
+            return (
+              <div
+                key={team.id}
+                className={`bg-white rounded-xl border transition-all ${
+                  team.active ? 'border-slate-200 shadow-xs' : 'border-slate-200 opacity-60 bg-slate-50'
+                }`}
+              >
+                {/* Team Card Header */}
+                <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/70">
+                  <div className="flex items-center space-x-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
+                    <h3 className="font-bold text-sm text-slate-900">{team.teamName}</h3>
+                    <span className="text-[11px] bg-white border border-slate-200 text-slate-600 px-2 py-0.5 rounded-full font-semibold">
+                      {teamExecs.length} {teamExecs.length === 1 ? 'Executive' : 'Executives'}
+                    </span>
                   </div>
-                )}
+
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => handleOpenTeamModal(team)}
+                      className="p-1 text-slate-400 hover:text-slate-700"
+                      title="Edit Team Name"
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleToggleTeamActive(team)}
+                      className={`text-xs px-2 py-0.5 rounded font-medium ${
+                        team.active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-200 text-slate-600'
+                      }`}
+                    >
+                      {team.active ? 'Active' : 'Inactive'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Executives in this team */}
+                <div className="p-4">
+                  {teamExecs.length === 0 ? (
+                    <div className="py-4 text-center">
+                      <p className="text-xs text-slate-400 italic">No sales executives created in this team yet.</p>
+                      <button
+                        onClick={() => {
+                          setEditingExec(null);
+                          setExecName('');
+                          setExecTeamId(team.id);
+                          setExecMobile('');
+                          setExecEmail('');
+                          setShowExecModal(true);
+                        }}
+                        className="mt-2 text-xs text-blue-600 hover:text-blue-800 font-semibold"
+                      >
+                        + Add Executive to {team.teamName}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-slate-100">
+                      {teamExecs.map((exec) => (
+                        <div key={exec.id} className="py-2.5 flex justify-between items-center text-xs">
+                          <div>
+                            <div className="font-semibold text-slate-900 flex items-center space-x-2">
+                              <span>{exec.name}</span>
+                              {!exec.active && (
+                                <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.2 rounded">
+                                  Inactive
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center space-x-3 text-[11px] text-slate-500 mt-0.5">
+                              {exec.mobile && (
+                                <span className="flex items-center space-x-1 font-mono">
+                                  <Phone className="w-3 h-3 text-slate-400" />
+                                  <span>{exec.mobile}</span>
+                                </span>
+                              )}
+                              {exec.email && (
+                                <span className="flex items-center space-x-1">
+                                  <Mail className="w-3 h-3 text-slate-400" />
+                                  <span>{exec.email}</span>
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center space-x-1">
+                            <button
+                              onClick={() => handleOpenExecModal(exec)}
+                              className="p-1 hover:bg-slate-100 rounded text-slate-500 hover:text-slate-800"
+                              title="Edit / Move Team"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleToggleExecActive(exec)}
+                              className="p-1 text-slate-400 hover:text-slate-700"
+                              title={exec.active ? 'Deactivate' : 'Activate'}
+                            >
+                              {exec.active ? (
+                                <ToggleRight className="w-5 h-5 text-emerald-600" />
+                              ) : (
+                                <ToggleLeft className="w-5 h-5 text-slate-400" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Team Modal */}
       {showTeamModal && (

@@ -106,6 +106,18 @@ export const ExecutiveWork: React.FC<ExecutiveWorkProps> = ({
     return <span className={`px-2 py-0.5 rounded text-[10px] border whitespace-nowrap ${color}`}>{s}</span>;
   };
 
+  if (executives.length === 0) {
+    return (
+      <div className="bg-white rounded-xl border border-slate-200 p-12 text-center shadow-xs">
+        <UserCheck className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+        <h3 className="text-sm font-bold text-slate-800">No sales executives created yet</h3>
+        <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+          Create sales executives and assign them to teams in the "Teams & Executives" master to monitor individual sales pipelines.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header with Executive Selector */}

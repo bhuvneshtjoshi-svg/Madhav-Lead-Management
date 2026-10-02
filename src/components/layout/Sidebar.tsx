@@ -12,6 +12,7 @@ import {
   PlusCircle,
   Printer,
   Settings,
+  Target,
   UserCheck,
   Users,
 } from 'lucide-react';
@@ -19,6 +20,7 @@ import { storage, getTodayDateString } from '../../services/storage';
 
 export type NavItem =
   | 'dashboard'
+  | 'target-setter'
   | 'new-lead'
   | 'leads'
   | 'today'
@@ -53,6 +55,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     badgeColor?: string;
   }> = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'target-setter', label: 'Target Setter', icon: Target },
     { id: 'new-lead', label: 'New Lead', icon: PlusCircle },
     { id: 'leads', label: 'All Leads', icon: Users },
     {

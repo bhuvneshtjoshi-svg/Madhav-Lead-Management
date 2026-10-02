@@ -15,6 +15,7 @@ import {
   Users,
 } from 'lucide-react';
 import { AddFollowupModal } from '../followups/AddFollowupModal';
+import { MonthlyTargetSection } from '../targets/MonthlyTargetSection';
 
 interface DashboardProps {
   onSelectLead: (leadId: string) => void;
@@ -249,6 +250,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </div>
 
+      {/* MONTHLY TARGET & ACHIEVEMENT SECTION */}
+      <MonthlyTargetSection
+        onNavigateToTargetSetter={() => onNavigate('target-setter')}
+        onSelectLead={onSelectLead}
+      />
+
       {/* Grid: Today's Follow-ups & Overdue Follow-ups */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* TODAY'S FOLLOW-UPS */}
@@ -434,60 +441,90 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </button>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50/40 text-slate-500 font-semibold text-[10px] uppercase border-b border-slate-200">
-              <tr>
-                <th className="py-2.5 px-3.5">Lead ID</th>
-                <th className="py-2.5 px-3">Customer</th>
-                <th className="py-2.5 px-3">Project & Unit</th>
-                <th className="py-2.5 px-3">Executive</th>
-                <th className="py-2.5 px-3">Team</th>
-                <th className="py-2.5 px-2 text-center">Priority</th>
-                <th className="py-2.5 px-3 text-center">Status</th>
-                <th className="py-2.5 px-3 text-right">Created Date</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {recentLeadsList.map((lead) => (
-                <tr
-                  key={lead.id}
-                  onClick={() => onSelectLead(lead.id)}
-                  className="hover:bg-blue-50/30 transition-colors cursor-pointer"
-                >
-                  <td className="py-2.5 px-3.5 font-mono font-bold text-blue-900">
-                    {lead.leadId}
-                  </td>
-                  <td className="py-2.5 px-3">
-                    <div className="font-bold text-slate-900">{lead.customerDetails.name}</div>
-                    <div className="text-[10px] text-slate-500 font-mono">{lead.customerDetails.mobile}</div>
-                  </td>
-                  <td className="py-2.5 px-3">
-                    <div className="font-medium text-slate-800">{lead.interestedProject}</div>
-                    <div className="text-[10px] text-slate-500 truncate max-w-[130px]">
-                      {lead.propertyRequirement.preferredUnit || '-'}
-                    </div>
-                  </td>
-                  <td className="py-2.5 px-3 font-medium text-slate-800">
-                    {lead.executiveName}
-                  </td>
-                  <td className="py-2.5 px-3 text-slate-600">
-                    {lead.teamName}
-                  </td>
-                  <td className="py-2.5 px-2 text-center whitespace-nowrap">
-                    {getPriorityBadge(lead.priority)}
-                  </td>
-                  <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                    {getStatusBadge(lead.status)}
-                  </td>
-                  <td className="py-2.5 px-3 text-right text-slate-500 font-mono whitespace-nowrap">
-                    {formatDate(lead.leadDate)}
-                  </td>
+        {recentLeadsList.length === 0 ? (
+          <div className="p-10 text-center">
+            <Users className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+            <h4 className="text-sm font-bold text-slate-800">No leads have been created yet</h4>
+            <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+              Create your real customer leads to track daily follow-ups, assign sales executives, and generate printed A4 customer file records.
+            </p>
+            <div className="mt-4 flex flex-wrap justify-center items-center gap-3 text-xs">
+              <button
+                onClick={() => onNavigate('teams')}
+                className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg border border-slate-300"
+              >
+                1. Create Team
+              </button>
+              <button
+                onClick={() => onNavigate('masters')}
+                className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg border border-slate-300"
+              >
+                2. Add Project
+              </button>
+              <button
+                onClick={onNewLeadClick}
+                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-xs"
+              >
+                3. Create New Lead
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50/40 text-slate-500 font-semibold text-[10px] uppercase border-b border-slate-200">
+                <tr>
+                  <th className="py-2.5 px-3.5">Lead ID</th>
+                  <th className="py-2.5 px-3">Customer</th>
+                  <th className="py-2.5 px-3">Project & Unit</th>
+                  <th className="py-2.5 px-3">Executive</th>
+                  <th className="py-2.5 px-3">Team</th>
+                  <th className="py-2.5 px-2 text-center">Priority</th>
+                  <th className="py-2.5 px-3 text-center">Status</th>
+                  <th className="py-2.5 px-3 text-right">Created Date</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {recentLeadsList.map((lead) => (
+                  <tr
+                    key={lead.id}
+                    onClick={() => onSelectLead(lead.id)}
+                    className="hover:bg-blue-50/30 transition-colors cursor-pointer"
+                  >
+                    <td className="py-2.5 px-3.5 font-mono font-bold text-blue-900">
+                      {lead.leadId}
+                    </td>
+                    <td className="py-2.5 px-3">
+                      <div className="font-bold text-slate-900">{lead.customerDetails.name}</div>
+                      <div className="text-[10px] text-slate-500 font-mono">{lead.customerDetails.mobile}</div>
+                    </td>
+                    <td className="py-2.5 px-3">
+                      <div className="font-medium text-slate-800">{lead.interestedProject}</div>
+                      <div className="text-[10px] text-slate-500 truncate max-w-[130px]">
+                        {lead.propertyRequirement.preferredUnit || '-'}
+                      </div>
+                    </td>
+                    <td className="py-2.5 px-3 font-medium text-slate-800">
+                      {lead.executiveName}
+                    </td>
+                    <td className="py-2.5 px-3 text-slate-600">
+                      {lead.teamName}
+                    </td>
+                    <td className="py-2.5 px-2 text-center whitespace-nowrap">
+                      {getPriorityBadge(lead.priority)}
+                    </td>
+                    <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                      {getStatusBadge(lead.status)}
+                    </td>
+                    <td className="py-2.5 px-3 text-right text-slate-500 font-mono whitespace-nowrap">
+                      {formatDate(lead.leadDate)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Quick Action Followup Modal */}
