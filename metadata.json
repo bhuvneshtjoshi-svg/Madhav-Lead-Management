@@ -1,0 +1,6 @@
+{
+  "name": "BM Sales Lead Manager",
+  "description": "Desktop business application for managing customer leads, daily follow-ups, sales executives, teams, and printed A4 customer lead files.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
